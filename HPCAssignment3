@@ -1,0 +1,83 @@
+import java.util.Arrays;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveTask;
+
+public class ParallelReduction {
+
+    static class ReduceTask extends RecursiveTask<Integer> {
+        private final int[] array;
+        private final int start;
+        private final int end;
+        private final Operation op;
+
+        enum Operation {
+            SUM,
+            MIN,
+            MAX
+        }
+
+        public ReduceTask(int[] array, int start, int end, Operation op) {
+            this.array = array;
+            this.start = start;
+            this.end = end;
+            this.op = op;
+        }
+
+        @Override
+        protected Integer compute() {
+            if (end - start <= 1) {
+                switch (op) {
+                    case SUM:
+                        return array[start];
+                    case MIN:
+                        return array[start];
+                    case MAX:
+                        return array[start];
+                }
+            } else {
+                int mid = (start + end) / 2;
+                ReduceTask leftTask = new ReduceTask(array, start, mid, op);
+                ReduceTask rightTask = new ReduceTask(array, mid, end, op);
+                leftTask.fork();
+                int rightResult = rightTask.compute();
+                int leftResult = leftTask.join();
+                switch (op) {
+                    case SUM:
+                        return leftResult + rightResult;
+                    case MIN:
+                        return Math.min(leftResult, rightResult);
+                    case MAX:
+                        return Math.max(leftResult, rightResult);
+                }
+            }
+            return 0;
+        }
+    }
+
+    public static int parallelReduce(int[] array, ReduceTask.Operation op) {
+        ForkJoinPool pool = new ForkJoinPool();
+        return pool.invoke(new ReduceTask(array, 0, array.length, op));
+    }
+
+    public static double average(int[] array) {
+        int sum = parallelReduce(array, ReduceTask.Operation.SUM);
+        return (double) sum / array.length;
+    }
+
+    public static int min(int[] array) {
+        return parallelReduce(array, ReduceTask.Operation.MIN);
+    }
+
+    public static int max(int[] array) {
+        return parallelReduce(array, ReduceTask.Operation.MAX);
+    }
+
+    public static void main(String[] args) {
+        int[] array = {1, 5, 3, 8, 2, 7, 4, 9, 6};
+        System.out.println("Array: " + Arrays.toString(array));
+        System.out.println("Sum: " + parallelReduce(array, ReduceTask.Operation.SUM));
+        System.out.println("Min: " + parallelReduce(array, ReduceTask.Operation.MIN));
+        System.out.println("Max: " + parallelReduce(array, ReduceTask.Operation.MAX));
+        System.out.println("Average: " + average(array));
+    }
+}
