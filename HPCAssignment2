@@ -1,0 +1,166 @@
+import java.util.Arrays;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
+public class ParallelSorting {
+
+    // Sequential Bubble Sort
+    public static void bubbleSort(int[] arr) {
+        int n = arr.length;
+        for (int i = 0; i < n - 1; i++) {
+            for (int j = 0; j < n - i - 1; j++) {
+                if (arr[j] > arr[j + 1]) {
+                    // swap arr[j+1] and arr[i]
+                    int temp = arr[j];
+                    arr[j] = arr[j + 1];
+                    arr[j + 1] = temp;
+                }
+            }
+        }
+    }
+
+    // Parallel Bubble Sort using OpenMP
+    public static void parallelBubbleSort(int[] arr) {
+        int n = arr.length;
+        int numThreads = Runtime.getRuntime().availableProcessors();
+        int chunkSize = n / numThreads;
+
+        // Parallel section using OpenMP
+        #pragma omp parallel num_threads(numThreads)
+        {
+            #pragma omp for schedule(static, chunkSize)
+            for (int i = 0; i < n - 1; i++) {
+                for (int j = 0; j < n - i - 1; j++) {
+                    if (arr[j] > arr[j + 1]) {
+                        // swap arr[j+1] and arr[i]
+                        int temp = arr[j];
+                        arr[j] = arr[j + 1];
+                        arr[j + 1] = temp;
+                    }
+                }
+            }
+        }
+    }
+
+    // Sequential Merge Sort
+    public static void mergeSort(int[] arr) {
+        if (arr.length <= 1)
+            return;
+
+        int mid = arr.length / 2;
+        int[] left = Arrays.copyOfRange(arr, 0, mid);
+        int[] right = Arrays.copyOfRange(arr, mid, arr.length);
+
+        mergeSort(left);
+        mergeSort(right);
+
+        merge(arr, left, right);
+    }
+
+    private static void merge(int[] arr, int[] left, int[] right) {
+        int i = 0, j = 0, k = 0;
+        while (i < left.length && j < right.length) {
+            if (left[i] <= right[j]) {
+                arr[k++] = left[i++];
+            } else {
+                arr[k++] = right[j++];
+            }
+        }
+        while (i < left.length) {
+            arr[k++] = left[i++];
+        }
+        while (j < right.length) {
+            arr[k++] = right[j++];
+        }
+    }
+
+    // Parallel Merge Sort using OpenMP
+    public static void parallelMergeSort(int[] arr) {
+        parallelMergeSort(arr, 0, arr.length - 1);
+    }
+
+    private static void parallelMergeSort(int[] arr, int low, int high) {
+        if (low < high) {
+            int mid = (low + high) / 2;
+            #pragma omp task
+            parallelMergeSort(arr, low, mid);
+            #pragma omp task
+            parallelMergeSort(arr, mid + 1, high);
+            #pragma omp taskwait
+            merge(arr, low, mid, high);
+        }
+    }
+
+    private static void merge(int[] arr, int low, int mid, int high) {
+        int[] temp = new int[arr.length];
+        int left = low;
+        int right = mid + 1;
+        int k = low;
+
+        while (left <= mid && right <= high) {
+            if (arr[left] <= arr[right]) {
+                temp[k++] = arr[left++];
+            } else {
+                temp[k++] = arr[right++];
+            }
+        }
+
+        while (left <= mid) {
+            temp[k++] = arr[left++];
+        }
+
+        while (right <= high) {
+            temp[k++] = arr[right++];
+        }
+
+        for (int i = low; i <= high; i++) {
+            arr[i] = temp[i];
+        }
+    }
+
+    public static void main(String[] args) {
+        int[] arr = generateRandomArray(100000); // Change the size of the array as needed
+
+        // Sequential Bubble Sort
+        int[] arr1 = Arrays.copyOf(arr, arr.length);
+        long startTime = System.nanoTime();
+        bubbleSort(arr1);
+        long endTime = System.nanoTime();
+        long sequentialBubbleSortTime = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
+        System.out.println("Sequential Bubble Sort Time: " + sequentialBubbleSortTime + " ms");
+
+        // Parallel Bubble Sort
+        int[] arr2 = Arrays.copyOf(arr, arr.length);
+        startTime = System.nanoTime();
+        parallelBubbleSort(arr2);
+        endTime = System.nanoTime();
+        long parallelBubbleSortTime = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
+        System.out.println("Parallel Bubble Sort Time: " + parallelBubbleSortTime + " ms");
+
+        // Sequential Merge Sort
+        int[] arr3 = Arrays.copyOf(arr, arr.length);
+        startTime = System.nanoTime();
+        mergeSort(arr3);
+        endTime = System.nanoTime();
+        long sequentialMergeSortTime = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
+        System.out.println("Sequential Merge Sort Time: " + sequentialMergeSortTime + " ms");
+
+        // Parallel Merge Sort
+        int[] arr4 = Arrays.copyOf(arr, arr.length);
+        startTime = System.nanoTime();
+        parallelMergeSort(arr4);
+        endTime = System.nanoTime();
+        long parallelMergeSortTime = TimeUnit.NANOSECONDS.toMillis(endTime - startTime);
+        System.out.println("Parallel Merge Sort Time: " + parallelMergeSortTime + " ms");
+    }
+
+    // Method to generate a random array
+    private static int[] generateRandomArray(int size) {
+        int[] arr = new int[size];
+        Random random = new Random();
+        for (int i = 0; i < size; i++) {
+            arr[i] = random.nextInt(1000); // Change the upper bound as needed
+        }
+        return arr;
+    }
+}
