@@ -1,0 +1,56 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+import tensorflow as tf
+
+data = pd.read_csv('HousingData.csv')
+data.info()
+
+data.dropna(inplace=True)
+data.info()
+
+import matplotlib.pyplot as plt
+
+plt.figure(figsize= (10,6))
+data.boxplot()
+plt.title('Features boxplot')
+plt.xticks(rotation=45)
+plt.show()
+
+Q1 = data.quantile(0.25)
+Q3 = data.quantile(0.75)
+IQR = Q3-Q1
+
+threshold = 1.5
+
+outliers = ((data < (Q1 - threshold*IQR)) | (data > (Q3 + threshold*IQR))).any(axis=1)
+
+dataCleaned = data[~outliers]
+
+plt.figure(figsize= (10,6))
+dataCleaned.boxplot()
+plt.title('Features boxplot')
+plt.xticks(rotation=45)
+plt.show()
+
+x = data.drop('MEDV', axis=1)
+y = data['MEDV']
+
+xTrain, xTest, yTrain, yTest = train_test_split(x, y, test_size=0.2, random_state=42)
+
+scaler = StandardScaler()
+xTrainScaled = scaler.fit_transform(xTrain)
+xTestScaled = scaler.fit_transform(xTest)
+
+model = tf.keras.Sequential([
+    tf.keras.layers.Dense(1, input_shape = [xTrainScaled.shape[1]])
+])
+
+model.compile(optimizer = 'adam', loss = 'mean_squared_error')
+
+model.fit(xTrainScaled, yTrain, epochs=100, batch_size=32, verbose=2)
+
+loss = model.evaluate(xTestScaled, yTest)
+
+predictions = model.predict(xTestScaled)
