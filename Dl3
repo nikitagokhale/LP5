@@ -1,0 +1,48 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+
+train = pd.read_csv('train.csv')
+test = pd.read_csv('test.csv')
+
+train.info()
+
+train['Close'] = train['Close'].str.replace(',','').astype(float)
+
+scaler = StandardScaler()
+train[['Close']] = scaler.fit_transform(train[['Close']])
+test[['Close']] = scaler.fit_transform(test[['Close']])
+
+n = 1
+
+yTrain = train['Close'].shift(-n)
+yTrain.fillna(method='ffill',inplace=True)
+yTrain = yTrain.values
+
+xTrain = train[['Close']].values
+xTrain = xTrain.reshape(xTrain.shape[0],1,xTrain.shape[1])
+
+model = Sequential([
+    LSTM(units=50, return_sequences = True, input_shape=(xTrain.shape[1],xTrain.shape[2])),
+    LSTM(units=50, return_sequences = False),
+    Dense(units=1)
+])
+
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+model.fit(xTrain, yTrain, epochs=100, batch_size=32, verbose=1)
+
+xTest = test[['Close']].values
+xTest = xTest.reshape(xTest.shape[0],1,xTest.shape[1])
+
+yTest = test['Close'].shift(-n)
+yTest.fillna(method='ffill',inplace=True)
+yTest = yTest.values
+
+loss = model.evaluate(xTest, yTest)
+
+predictions = model.predict(xTest)
+
+predictions
