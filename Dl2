@@ -1,0 +1,40 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+import tensorflow as tf
+from tensorflow.keras import models, layers
+
+trainData = pd.read_csv('fashion-mnist_train.csv')
+testData = pd.read_csv('fashion-mnist_test.csv')
+
+xTrain = trainData.drop('label', axis=1)
+yTrain = trainData['label']
+xTest = testData.drop('label', axis=1)
+yTest = testData['label']
+
+xTrain = xTrain.values.reshape(-1,28,28,1)/255.0
+xTest = xTest.values.reshape(-1,28,28,1)/255.0
+
+xTrain, xVal, yTrain, yVal = train_test_split(xTrain, yTrain, test_size=0.2, random_state=42)
+
+model = models.Sequential([
+    layers.Conv2D(32,(3,3), activation='relu', input_shape = (28,28,1)),
+    layers.MaxPooling2D(2,2),
+    layers.Conv2D(64,(3,3), activation='relu'),
+    layers.MaxPooling2D(2,2),
+    layers.Conv2D(64,(3,3), activation='relu'),
+    layers.Flatten(),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(10, activation='softmax')
+])
+
+model.compile(optimizer = 'adam', loss = 'sparse_categorical_crossentropy', metrics=['accuracy'])
+
+model.fit(xTrain, yTrain, epochs=10, batch_size=64, validation_data = (xVal,yVal))
+
+loss, accuracy = model.evaluate(xTest, yTest)
+
+predictions = model.predict(xTest)
+
+predictions
